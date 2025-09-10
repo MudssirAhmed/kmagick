@@ -16,7 +16,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Make matrix
         id: generate
@@ -24,7 +24,7 @@ jobs:
           python .github-deps/generate-matrix.py rust/rust-toolchain.toml
 
     outputs:
-        matrix: ${{ steps.generate.outputs.matrix }}
+      matrix: ${{ steps.generate.outputs.matrix }}
 
   build:
     name: Build
@@ -36,12 +36,12 @@ jobs:
 
     steps:
       - name: Checkout Android ImageMagick
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           repository: molotovcherry/Android-ImageMagick7
 
       - name: Checkout KMagick
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           path: kmagick-rs
 
@@ -50,7 +50,7 @@ jobs:
         run: |
           $dir = Get-ChildItem -Directory -Path "ImageMagick-*" | Select-Object -Last 1
           $tag = ($dir | Split-Path -Leaf).Substring(12)
-          Write-Host "::set-output name=TAG::$tag"
+          echo "TAG=$tag" >> $env:GITHUB_OUTPUT
 
       - name: Get toolchain version
         uses: SebRollen/toml-action@v1.0.0
@@ -78,7 +78,7 @@ jobs:
       - name: Cache ImageMagick Setup
         if: matrix.windows
         id: cache-imagemagick
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: app
           key: imagemagick-${{ steps.tag.outputs.TAG }}-${{ matrix.im_arch }}
@@ -87,8 +87,8 @@ jobs:
         if: steps.cache-imagemagick.outputs.cache-hit != 'true' && matrix.windows
         uses: carlosperate/download-file-action@v1.0.3
         with:
-            file-url: 'https://imagemagick.org/archive/binaries/ImageMagick-${{ steps.tag.outputs.TAG }}-Q16-HDRI-${{ matrix.im_arch }}-dll.exe'
-            file-name: 'ImageMagick.exe'
+          file-url: 'https://imagemagick.org/archive/binaries/ImageMagick-${{ steps.tag.outputs.TAG }}-Q16-HDRI-${{ matrix.im_arch }}-dll.exe'
+          file-name: 'ImageMagick.exe'
 
       - name: Fetch latest Innoextract
         if: steps.cache-imagemagick.outputs.cache-hit != 'true' && matrix.windows
@@ -110,7 +110,7 @@ jobs:
 
       - name: Cache LLVM and Clang
         id: cache-llvm
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/llvm
           key: llvm-12
@@ -159,7 +159,7 @@ jobs:
         run: ./${{ matrix.debug.tool }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: build-${{ matrix.target }}
           path: kmagick-rs/rust/target/${{ matrix.target }}/debug/${{ matrix.output }}
@@ -171,7 +171,7 @@ jobs:
 
     steps:
       - name: Checkout KMagick
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           path: kmagick-rs
 
@@ -181,7 +181,7 @@ jobs:
           ./gradlew kmagick:build
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: build-kmagick
           path: kmagick-rs/kmagick/build/libs/kmagick*.jar
