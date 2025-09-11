@@ -66,14 +66,25 @@ jobs:
           tag: latest
           owner: molotovcherry
           repo: Android-ImageMagick7
-          file: imagemagick-7-android-shared.zip
+          file: imagemagick-7-android-arm64-v8a.zip
           path: jniLibs/
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify download
+        if: matrix.android
+        run: |
+          ls -la jniLibs/
+          echo "Checking if file exists..."
+          if (Test-Path "jniLibs/imagemagick-7-android-arm64-v8a.zip") {
+            echo "File exists"
+          } else {
+            echo "File does not exist"
+          }
 
       - name: Extract archives
         if: matrix.android
         run: |
-          Expand-Archive -Path jniLibs/imagemagick-7-android-shared.zip -DestinationPath jniLibs/
+          Expand-Archive -Path jniLibs/imagemagick-7-android-arm64-v8a.zip -DestinationPath jniLibs/
 
       - name: Cache ImageMagick Setup
         if: matrix.windows
