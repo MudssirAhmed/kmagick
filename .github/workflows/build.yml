@@ -167,12 +167,6 @@ jobs:
 
       - name: Build
         working-directory: kmagick-rs/rust
-        env:
-          CFLAGS: "-DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16"
-          CXXFLAGS: "-DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16"
-          MAGICKCORE_HDRI_ENABLE: "1"
-          MAGICKCORE_QUANTUM_DEPTH: "16"
-          RUSTFLAGS: "--cfg magickcore_hdri_enable --cfg magickcore_quantum_depth"
         run: ./${{ matrix.debug.tool }}
 
       - name: Upload artifacts
