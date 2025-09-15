@@ -1,0 +1,314 @@
+name: Android Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'rust/**'
+      - 'android/**'
+      - '.github/workflows/android.yml'
+  pull_request:
+    paths:
+      - 'rust/**'
+      - 'android/**'
+      - '.github/workflows/android.yml'
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  android-build:
+    name: Build Android Libraries
+    runs-on: ubuntu-latest
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        target: 
+          - aarch64-linux-android
+          - armv7-linux-androideabi
+          - i686-linux-android
+          - x86_64-linux-android
+        include:
+          - target: aarch64-linux-android
+            arch: arm64-v8a
+          - target: armv7-linux-androideabi
+            arch: armeabi-v7a
+          - target: i686-linux-android
+            arch: x86
+          - target: x86_64-linux-android
+            arch: x86_64
+
+    steps:
+      - name: Checkout KMagick
+        uses: actions/checkout@v4
+        with:
+          path: kmagick
+
+      - name: Checkout Android ImageMagick
+        uses: actions/checkout@v4
+        with:
+          repository: MolotovCherry/Android-ImageMagick7
+          path: android-imagemagick
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r22b
+          add-to-path: false
+
+      - name: Cache ImageMagick Libraries
+        id: cache-imagemagick
+        uses: actions/cache@v4
+        with:
+          path: android-imagemagick/jniLibs
+          key: imagemagick-android-${{ matrix.arch }}-v2
+
+      - name: Download ImageMagick Android Libraries
+        if: steps.cache-imagemagick.outputs.cache-hit != 'true'
+        run: |
+          cd android-imagemagick
+          wget -q https://github.com/MolotovCherry/Android-ImageMagick7/releases/latest/download/imagemagick-7-android-shared.zip
+          mkdir -p jniLibs
+          unzip -q imagemagick-7-android-shared.zip -d jniLibs/
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache Rust Dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: android-${{ matrix.target }}
+          workspaces: kmagick/rust
+
+      - name: Setup Android Environment
+        run: |
+          echo "ANDROID_NDK_HOME=${{ steps.setup-ndk.outputs.ndk-path }}" >> $GITHUB_ENV
+          echo "NDK_HOME=${{ steps.setup-ndk.outputs.ndk-path }}" >> $GITHUB_ENV
+          echo "${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
+          
+          # Setup ImageMagick environment
+          export IMAGEMAGICK_ROOT=$(realpath android-imagemagick/ImageMagick-*)
+          echo "IMAGE_MAGICK_DIR=$IMAGEMAGICK_ROOT" >> $GITHUB_ENV
+          echo "IMAGE_MAGICK_LIBS=magickwand-7:magickcore-7" >> $GITHUB_ENV
+          echo "IMAGE_MAGICK_LIB_DIRS=$(realpath android-imagemagick/jniLibs)" >> $GITHUB_ENV
+          echo "IMAGE_MAGICK_INCLUDE_DIRS=$IMAGEMAGICK_ROOT:$IMAGEMAGICK_ROOT/configs/${{ matrix.arch }}" >> $GITHUB_ENV
+          echo "IMAGE_MAGICK_STATIC=0" >> $GITHUB_ENV
+
+      - name: Configure Cargo for Android
+        run: |
+          mkdir -p ~/.cargo
+          cat > ~/.cargo/config.toml << EOF
+          [target.aarch64-linux-android]
+          ar = "${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+          linker = "${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android23-clang"
+          
+          [target.armv7-linux-androideabi]
+          ar = "${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+          linker = "${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi23-clang"
+          
+          [target.i686-linux-android]
+          ar = "${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+          linker = "${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android23-clang"
+          
+          [target.x86_64-linux-android]
+          ar = "${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+          linker = "${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android23-clang"
+          EOF
+
+      - name: Build for Android
+        working-directory: kmagick/rust
+        run: |
+          echo "Building for target: ${{ matrix.target }}"
+          cargo build --target ${{ matrix.target }} --release -p kmagick-rs --verbose
+
+      - name: Verify Build Output
+        run: |
+          LIBRARY_PATH="kmagick/rust/target/${{ matrix.target }}/release/libkmagick.so"
+          if [ -f "$LIBRARY_PATH" ]; then
+            echo "✓ Library built successfully: $LIBRARY_PATH"
+            ls -lh "$LIBRARY_PATH"
+            file "$LIBRARY_PATH"
+            
+            # Check library dependencies
+            echo "Library dependencies:"
+            readelf -d "$LIBRARY_PATH" | grep NEEDED || true
+          else
+            echo "❌ Library not found at: $LIBRARY_PATH"
+            exit 1
+          fi
+
+      - name: Prepare Android Library Structure
+        run: |
+          mkdir -p kmagick/android/libs/${{ matrix.arch }}
+          cp kmagick/rust/target/${{ matrix.target }}/release/libkmagick.so kmagick/android/libs/${{ matrix.arch }}/
+          
+          # Create metadata file
+          cat > kmagick/android/libs/${{ matrix.arch }}/build-info.json << EOF
+          {
+            "target": "${{ matrix.target }}",
+            "arch": "${{ matrix.arch }}",
+            "build_time": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "ndk_version": "r22b",
+            "rust_version": "$(rustc --version)"
+          }
+          EOF
+
+      - name: Upload Android Library
+        uses: actions/upload-artifact@v4
+        with:
+          name: kmagick-android-${{ matrix.arch }}
+          path: |
+            kmagick/android/libs/${{ matrix.arch }}/
+          retention-days: 30
+
+  android-package:
+    name: Package Android Libraries
+    needs: android-build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download All Android Libraries
+        uses: actions/download-artifact@v4
+        with:
+          path: android-libs
+          pattern: kmagick-android-*
+          merge-multiple: true
+
+      - name: Create Android Package
+        run: |
+          mkdir -p android-package/libs
+          cp -r android-libs/* android-package/libs/
+          
+          # Create package metadata
+          cat > android-package/README.md << EOF
+          # KMagick Android Libraries
+          
+          Built on: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          NDK Version: r22b
+          Supported Architectures:
+          EOF
+          
+          for arch_dir in android-package/libs/*/; do
+            if [ -d "$arch_dir" ]; then
+              arch=$(basename "$arch_dir")
+              size=$(stat -f%z "$arch_dir/libkmagick.so" 2>/dev/null || stat -c%s "$arch_dir/libkmagick.so")
+              size_mb=$(echo "scale=2; $size/1024/1024" | bc -l)
+              echo "- $arch (${size_mb}MB)" >> android-package/README.md
+            fi
+          done
+          
+          echo "" >> android-package/README.md
+          echo "## Usage" >> android-package/README.md
+          echo "Copy the libs directory to your Android project's src/main/jniLibs/" >> android-package/README.md
+
+      - name: Create Android Archive
+        run: |
+          cd android-package
+          tar -czf ../kmagick-android-libraries.tar.gz .
+          cd ..
+          zip -r kmagick-android-libraries.zip android-package/
+
+      - name: Upload Complete Android Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: kmagick-android-complete
+          path: |
+            kmagick-android-libraries.tar.gz
+            kmagick-android-libraries.zip
+          retention-days: 90
+
+  android-test:
+    name: Test Android Builds
+    needs: android-build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Android Libraries
+        uses: actions/download-artifact@v4
+        with:
+          name: kmagick-android-arm64-v8a
+          path: test-libs
+
+      - name: Test Library Structure
+        run: |
+          echo "Testing Android library structure..."
+          
+          # Check if library exists
+          if [ ! -f "test-libs/libkmagick.so" ]; then
+            echo "❌ libkmagick.so not found"
+            exit 1
+          fi
+          
+          # Check architecture
+          ARCH=$(file test-libs/libkmagick.so | grep -o "aarch64\|x86-64\|i386\|ARM")
+          echo "✓ Architecture: $ARCH"
+          
+          # Check if it's a shared library
+          if ! file test-libs/libkmagick.so | grep -q "shared object"; then
+            echo "❌ Not a shared library"
+            exit 1
+          fi
+          
+          # Check for JNI exports
+          if ! nm -D test-libs/libkmagick.so 2>/dev/null | grep -q "Java_"; then
+            echo "❌ No JNI exports found"
+            exit 1
+          fi
+          
+          echo "✓ JNI exports found:"
+          nm -D test-libs/libkmagick.so 2>/dev/null | grep "Java_" | head -5
+          
+          echo "✓ Android library tests passed"
+
+  android-integration-test:
+    name: Android Integration Test
+    needs: android-package
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Android Package
+        uses: actions/download-artifact@v4
+        with:
+          name: kmagick-android-complete
+          path: android-dist
+
+      - name: Setup Test Environment
+        run: |
+          # Extract package
+          cd android-dist
+          tar -xzf kmagick-android-libraries.tar.gz
+          
+          # Verify all architectures are present
+          echo "Verifying Android package contents..."
+          expected_archs=("arm64-v8a" "armeabi-v7a" "x86" "x86_64")
+          
+          for arch in "${expected_archs[@]}"; do
+            lib_path="libs/$arch/libkmagick.so"
+            if [ -f "$lib_path" ]; then
+              echo "✓ Found $arch library"
+              size=$(stat -c%s "$lib_path")
+              echo "  Size: $((size/1024))KB"
+            else
+              echo "❌ Missing $arch library"
+              exit 1
+            fi
+          done
+          
+          echo "✓ All Android libraries present and valid"

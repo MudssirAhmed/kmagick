@@ -6,3 +6,21 @@ target
 .gradle
 build
 out
+
+# Android build artifacts
+android/libs/
+android-libs/
+*.apk
+*.aab
+local.properties
+
+# NDK build artifacts
+jni/
+obj/
+libs/
+
+# Android Studio
+.idea/
+*.iml
+.externalNativeBuild/
+.cxx/

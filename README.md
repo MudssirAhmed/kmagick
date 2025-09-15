@@ -17,6 +17,10 @@ All downloads are in the [releases section](https://github.com/MolotovCherry/kma
 ## Setup
 
 ### Android
+
+KMagick provides comprehensive Android NDK support with optimized builds for all major Android architectures.
+
+#### Quick Setup
 A full example of the below setup can be found [here](https://github.com/MolotovCherry/kmagick/tree/main/example/android-setup)
 
 1. Grab the jar and sources jar.
@@ -25,6 +29,32 @@ A full example of the below setup can be found [here](https://github.com/Molotov
 4. Place the [Android ImageMagick shared library](https://github.com/MolotovCherry/Android-ImageMagick7/releases) `so` files in your `app/src/main/jniLibs` folder along with the Android `kmagick.so` library.
 5. Either [download](http://objenesis.org/download.html) objenesis jar and place it in the libs folder, OR add this line to your dependencies:  
 `implementation 'org.objenesis:objenesis:3.2'`
+
+#### Building from Source
+For detailed build instructions and advanced configuration options, see the [Android Build Guide](android/README.md).
+
+**Quick Build Commands:**
+```bash
+# Build for all Android architectures (release)
+./rust/build-android-enhanced.ps1 -all -release
+
+# Build for specific architecture
+./rust/build-android-enhanced.ps1 -arch aarch64 -release
+
+# Using bash script (Linux/macOS)
+./android/build-all-targets.sh release
+```
+
+**Supported Android Architectures:**
+- arm64-v8a (aarch64-linux-android)
+- armeabi-v7a (armv7-linux-androideabi) 
+- x86 (i686-linux-android)
+- x86_64 (x86_64-linux-android)
+
+**Prerequisites:**
+- Android NDK r22b (recommended for compatibility)
+- Rust with Android targets installed
+- ImageMagick Android libraries
 
 Debug messages can be found in Android logcat under the id `MAGICK`. Make sure you first set the appropriate `LogLevel` to see them.
 
