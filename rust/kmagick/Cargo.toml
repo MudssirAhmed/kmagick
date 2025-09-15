@@ -11,6 +11,13 @@ build = "build.rs"
 name ="kmagick"
 crate-type = ["cdylib"]
 
+[features]
+default = ["imagemagick-static"]
+# Static linking for ImageMagick (preferred for Android)
+imagemagick-static = []
+# Dynamic linking for ImageMagick
+imagemagick-dynamic = []
+
 [build-dependencies]
 winres = "0.1.12"
 
