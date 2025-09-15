@@ -170,6 +170,9 @@ jobs:
         env:
           CFLAGS: "-DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16"
           CXXFLAGS: "-DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16"
+          MAGICKCORE_HDRI_ENABLE: "1"
+          MAGICKCORE_QUANTUM_DEPTH: "16"
+          RUSTFLAGS: "--cfg magickcore_hdri_enable=1 --cfg magickcore_quantum_depth=16"
         run: ./${{ matrix.debug.tool }}
 
       - name: Upload artifacts
