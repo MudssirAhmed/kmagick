@@ -56,6 +56,18 @@ $IMAGE_MAGICK_LIB_DIRS = $libdirs
 $IMAGE_MAGICK_INCLUDE_DIRS = "$imdir$sep$imdir/configs/$includearch"
 $IMAGE_MAGICK_STATIC = $static
 
+# Set Android NDK paths if not already set
+if (!$env:ANDROID_NDK_ROOT) {
+    if ($env:ANDROID_NDK_HOME) {
+        $env:ANDROID_NDK_ROOT = $env:ANDROID_NDK_HOME
+    } elseif ($env:NDK_HOME) {
+        $env:ANDROID_NDK_ROOT = $env:NDK_HOME
+    } else {
+        # Default NDK path
+        $env:ANDROID_NDK_ROOT = "/usr/local/lib/android/sdk/ndk/27.3.13750724"
+    }
+}
+
 if ($env:IMAGE_MAGICK_DIR -ne $IMAGE_MAGICK_DIR) {
     $env:IMAGE_MAGICK_DIR = $IMAGE_MAGICK_DIR
 }
