@@ -78,7 +78,15 @@ if ($release) {
 }
 
 if (!$expand) {
-    cargo build --color=always --target=$target -p kmagick-rs $flags
+    if($release) {
+        cargo build --color=always --target=$target -p kmagick-rs --release
+    } else {
+        cargo build --color=always --target=$target -p kmagick-rs
+    }
 } else {
-    cargo expand --color=always --target=$target -p kmagick-rs $flags
+    if($release) {
+        cargo expand --color=always --target=$target -p kmagick-rs --release
+    } else {
+        cargo expand --color=always --target=$target -p kmagick-rs
+    }
 }

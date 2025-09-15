@@ -51,13 +51,17 @@ if ($env:IMAGE_MAGICK_STATIC -ne $IMAGE_MAGICK_STATIC) {
     $env:IMAGE_MAGICK_STATIC = $IMAGE_MAGICK_STATIC
 }
 
-$flags = ""
-if ($release) {
-    $flags = "--release"
-}
 
 if (!$expand) {
-    cargo build --target=$target -p kmagick-rs $flags
+    if($release) {
+        cargo build --target=$target -p kmagick-rs --release
+    } else {
+        cargo build --target=$target -p kmagick-rs
+    }
 } else {
-    cargo expand --target=$target -p kmagick-rs $flags
+    if($release) {
+        cargo expand --target=$target -p kmagick-rs --release
+    } else {
+        cargo expand --target=$target -p kmagick-rs
+    }
 }
