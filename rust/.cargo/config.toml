@@ -1,10 +1,12 @@
 [target.aarch64-linux-android]
 ar = "aarch64-linux-android-ar.exe"
 linker = "aarch64-linux-android23-clang++.cmd"
+rustflags = ["--cfg", "magickcore_hdri_enable", "--cfg", "magickcore_quantum_depth"]
 
 [target.armv7-linux-androideabi]
 ar = "arm-linux-androideabi-ar.exe"
 linker = "armv7a-linux-androideabi23-clang++.cmd"
+rustflags = ["--cfg", "magickcore_hdri_enable", "--cfg", "magickcore_quantum_depth"]
 
 [env]
 MAGICKCORE_HDRI_ENABLE = "1"
