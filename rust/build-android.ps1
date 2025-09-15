@@ -72,10 +72,28 @@ if ($env:IMAGE_MAGICK_STATIC -ne $IMAGE_MAGICK_STATIC) {
     $env:IMAGE_MAGICK_STATIC = $IMAGE_MAGICK_STATIC
 }
 
-$flags = ""
-if ($release) {
-    $flags = "--release"
-}
+# Define the macros based on Application.mk values
+$env:CFLAGS = "-DMAGICKCORE_QUANTUM_DEPTH=16 -DMAGICKCORE_HDRI_ENABLE=1"
+$env:CXXFLAGS = "-DMAGICKCORE_QUANTUM_DEPTH=16 -DMAGICKCORE_HDRI_ENABLE=1"
+
+# Also set them as environment variables
+$env:MAGICKCORE_QUANTUM_DEPTH = "16"
+$env:MAGICKCORE_HDRI_ENABLE = "1"
+
+# Create a config header file
+$configHeader = @"
+#define MAGICKCORE_QUANTUM_DEPTH 16
+#define MAGICKCORE_HDRI_ENABLE 1
+"@
+
+# Save the config header
+$configPath = "D:\a\kmagick\kmagick\ImageMagick-7.1.2-3\MagickCore\magick-config-custom.h"
+New-Item -Path $configPath -ItemType File -Force
+Set-Content -Path $configPath -Value $configHeader
+
+# Add the custom config header to include path
+$env:CFLAGS += " -include `"$configPath`""
+$env:CXXFLAGS += " -include `"$configPath`""
 
 if (!$expand) {
     if($release) {
