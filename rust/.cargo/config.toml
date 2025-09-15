@@ -1,7 +1,29 @@
 [target.aarch64-linux-android]
-ar = "aarch64-linux-android-ar.exe"
-linker = "aarch64-linux-android23-clang++.cmd"
+ar = "/usr/local/lib/android/sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+linker = "/usr/local/lib/android/sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android23-clang++"
+rustflags = ["-C", "target-feature=+neon"]
 
-[target.armv7-linux-androideabi]
-ar = "arm-linux-androideabi-ar.exe"
-linker = "armv7a-linux-androideabi23-clang++.cmd"
+[target.armv7-linux-androideabi]  
+ar = "/usr/local/lib/android/sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+linker = "/usr/local/lib/android/sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi23-clang++"
+rustflags = ["-C", "target-feature=+neon"]
+
+[target.i686-linux-android]
+ar = "/usr/local/lib/android/sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+linker = "/usr/local/lib/android/sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android23-clang++"
+rustflags = ["-C", "target-cpu=i686"]
+
+[target.x86_64-linux-android]
+ar = "/usr/local/lib/android/sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+linker = "/usr/local/lib/android/sdk/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android23-clang++"
+rustflags = ["-C", "target-cpu=x86-64"]
+
+[env]
+# Android NDK configuration
+ANDROID_NDK_ROOT = { value = "/usr/local/lib/android/sdk/ndk/27.3.13750724", condition = { env-not-set = ["ANDROID_NDK_ROOT"] } }
+ANDROID_NDK_HOME = { value = "/usr/local/lib/android/sdk/ndk/27.3.13750724", condition = { env-not-set = ["ANDROID_NDK_HOME"] } }
+
+# ImageMagick configuration for Android
+IMAGE_MAGICK_STATIC = { value = "1", condition = { target-applies = ["cfg(target_os = \"android\")"] } }
+IMAGE_MAGICK_LIB_DIRS = { value = "", condition = { target-applies = ["cfg(target_os = \"android\")"] } }
+IMAGE_MAGICK_INCLUDE_DIRS = { value = "", condition = { target-applies = ["cfg(target_os = \"android\")"] } }
