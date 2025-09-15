@@ -1,14 +1,34 @@
+# Android ARM64 (arm64-v8a)
 [target.aarch64-linux-android]
-ar = "aarch64-linux-android-ar.exe"
-linker = "aarch64-linux-android23-clang++.cmd"
+ar = { optional = true, program = "aarch64-linux-android-ar" }
+linker = { optional = true, program = "aarch64-linux-android23-clang++" }
 rustflags = [
     "-C", "link-args=-DMAGICKCORE_QUANTUM_DEPTH=16",
     "-C", "link-args=-DMAGICKCORE_HDRI_ENABLE=1"
 ]
 
+# Android ARM (armeabi-v7a)
 [target.armv7-linux-androideabi]
-ar = "arm-linux-androideabi-ar.exe"
-linker = "armv7a-linux-androideabi23-clang++.cmd"
+ar = { optional = true, program = "arm-linux-androideabi-ar" }
+linker = { optional = true, program = "armv7a-linux-androideabi23-clang++" }
+rustflags = [
+    "-C", "link-args=-DMAGICKCORE_QUANTUM_DEPTH=16",
+    "-C", "link-args=-DMAGICKCORE_HDRI_ENABLE=1"
+]
+
+# Android x86
+[target.i686-linux-android]
+ar = { optional = true, program = "i686-linux-android-ar" }
+linker = { optional = true, program = "i686-linux-android23-clang++" }
+rustflags = [
+    "-C", "link-args=-DMAGICKCORE_QUANTUM_DEPTH=16",
+    "-C", "link-args=-DMAGICKCORE_HDRI_ENABLE=1"
+]
+
+# Android x86_64
+[target.x86_64-linux-android]
+ar = { optional = true, program = "x86_64-linux-android-ar" }
+linker = { optional = true, program = "x86_64-linux-android23-clang++" }
 rustflags = [
     "-C", "link-args=-DMAGICKCORE_QUANTUM_DEPTH=16",
     "-C", "link-args=-DMAGICKCORE_HDRI_ENABLE=1"

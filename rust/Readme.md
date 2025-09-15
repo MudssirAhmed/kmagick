@@ -19,6 +19,57 @@ The build script has several flags you can use.
 \* Please make sure you have Visual Studio Build Tools installed; you may also need to use the Visual Studio Dev console to find `stdio.h`
 
 ### Android
+
+**Modern Cross-Platform Approach:**
+
+kmagick now supports multiple methods for building Android libraries with improved tooling and documentation.
+
+**Prerequisites:**
+- Android NDK (r23c or later recommended)
+- Rust with Android targets installed
+- ImageMagick for Android ([Android-ImageMagick7](https://github.com/MolotovCherry/Android-ImageMagick7))
+
+**Quick Setup:**
+1. Install Android targets: `rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android`
+2. Set NDK environment: `export NDK_HOME=/path/to/android-ndk`
+3. Download [Android-ImageMagick](https://github.com/MolotovCherry/Android-ImageMagick7) repo
+4. Place kmagick repo inside Android-ImageMagick directory
+5. Download [Android-ImageMagick shared libs](https://github.com/MolotovCherry/Android-ImageMagick7/releases) to `jniLibs/` folder
+
+**Build Options:**
+
+*Option 1: Cross-platform build scripts*
+```bash
+# Linux/macOS
+./build-android.sh aarch64 --release
+
+# Windows PowerShell
+.\build-android.ps1 -arch aarch64 -release
+```
+
+*Option 2: cargo-ndk (recommended)*
+```bash
+cargo install cargo-ndk
+cargo ndk -t arm64-v8a -t armeabi-v7a -t x86 -t x86_64 -- build --package kmagick-rs --release
+```
+
+*Option 3: Manual cargo*
+```bash
+# Set environment variables first
+export IMAGE_MAGICK_DIR=/path/to/ImageMagick
+export IMAGE_MAGICK_LIBS="magickwand-7:magickcore-7"
+export IMAGE_MAGICK_LIB_DIRS=/path/to/jniLibs/arm64-v8a
+
+cargo build --target aarch64-linux-android --package kmagick-rs --release
+```
+
+**Supported Android Architectures:**
+- `aarch64` → ARM64 (arm64-v8a) - Most modern Android devices
+- `armv7` → ARM (armeabi-v7a) - Older Android devices  
+- `x86` → x86 - Android emulators/x86 devices
+- `x86_64` → x86_64 - Modern Android emulators/x86_64 devices
+
+**Legacy Instructions (Windows-specific):**
 - Download the entire [Android-ImageMagick](https://github.com/MolotovCherry/Android-ImageMagick7) repo
 - Place this kmagick repo in the Android-Imagemagick repo folder
 - Download the [latest Android-Imagemagick shared lib release](https://github.com/MolotovCherry/Android-ImageMagick7/releases)

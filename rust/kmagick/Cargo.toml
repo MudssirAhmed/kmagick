@@ -12,7 +12,7 @@ name ="kmagick"
 crate-type = ["cdylib"]
 
 [build-dependencies]
-winres = "0.1.12"
+winres = { version = "0.1.12", optional = true }
 
 # windows only metadata
 [package.metadata.winres]
@@ -41,3 +41,8 @@ bytemuck = "1.9.1"
 lazy_static = "1.4.0"
 fxhash = "0.2.1"
 enumn = "0.1.4"
+
+[features]
+default = []
+android = ["android_logger"]
+winres = ["dep:winres"]

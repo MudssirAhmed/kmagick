@@ -1,87 +1,140 @@
-# run this in ps 7 or more
-# options: arm aarch64 x86 x84_64 ; default: aarch64
+# Android build script for kmagick
+# Run this in PowerShell 7 or later for cross-platform support
+# Supports: arm64-v8a (aarch64), armeabi-v7a (armv7), x86, x86_64
+# Usage: .\build-android.ps1 -arch aarch64 [-release] [-expand]
+#   -arch: aarch64 (default), armv7, x86, x86_64  
+#   -release: Build in release mode
+#   -expand: Use cargo expand instead of build
 param([String]$arch="aarch64", [switch]$release, [switch]$expand) 
 
-$sep = if ($isWindows) {
-    ";"
-} else {
-    ":"
-}
+Write-Host "Building kmagick for Android architecture: $arch" -ForegroundColor Green
+
+$sep = if ($IsWindows) { ";" } else { ":" }
+$exe_ext = if ($IsWindows) { ".exe" } else { "" }
+$cmd_ext = if ($IsWindows) { ".cmd" } else { "" }
 
 $root = Resolve-Path -Path "$PSScriptRoot/../.."
 
-$content = Get-Content  -Path "$root/Application.mk"
-$static = (Select-String -InputObject $content -Pattern "STATIC_BUILD\s+:=\s+([^\s]+)").Matches.Groups[1]
-if ($static -eq "true") {
-    $static = "1"
+# Check if Application.mk exists for static build configuration
+$applicationMkPath = Join-Path $root "Application.mk"
+if (Test-Path $applicationMkPath) {
+    $content = Get-Content -Path $applicationMkPath -Raw
+    $staticMatch = [regex]::Match($content, "STATIC_BUILD\s*:=\s*([^\s\r\n]+)")
+    if ($staticMatch.Success) {
+        $static = $staticMatch.Groups[1].Value
+        if ($static -eq "true") {
+            $static = "1"
+        } else {
+            $static = "0"
+        }
+    } else {
+        $static = "0"
+    }
 } else {
+    Write-Warning "Application.mk not found. Assuming dynamic linking."
     $static = "0"
 }
 
-$imdir = Resolve-Path -Path "$root/ImageMagick-*"
-$jnidir = "$root/jniLibs"
+# Find ImageMagick directory
+$imdir = Get-ChildItem -Path $root -Directory -Name "ImageMagick-*" | Select-Object -First 1
+if ($imdir) {
+    $imdir = Join-Path $root $imdir
+} else {
+    Write-Warning "ImageMagick directory not found. Using default path."
+    $imdir = Join-Path $root "ImageMagick"
+}
+
+$jnidir = Join-Path $root "jniLibs"
 $includedir = $imdir
 $imlibs = "magick-7"
 $libdirs = ""
 
-$dirs = Get-ChildItem -Directory -Path $jnidir
-foreach ($d in $dirs) {
-    if ($libdirs.Length -eq 0) {
-        $libdirs += "$d"
-    } else {
-        $libdirs += "$sep$d"
+# Build library directories path
+if (Test-Path $jnidir) {
+    $dirs = Get-ChildItem -Directory -Path $jnidir
+    foreach ($d in $dirs) {
+        if ($libdirs.Length -eq 0) {
+            $libdirs += "$d"
+        } else {
+            $libdirs += "$sep$d"
+        }
     }
 }
 
-if ($arch -eq "aarch64") {
-    $includearch = "arm64"
-    $target = "aarch64-linux-android"
-} elseif ($arch -eq "arm") {
-    $includearch = "arm"
-    $target = "armv7-linux-androideabi"
-} elseif ($arch -eq "x86") {
-    $includearch = "x86"
-    $target = "i686-linux-android"
-} elseif ($arch -eq "x86_64") {
-    $includearch = "x86_64"
-    $target = "x86_64-linux-android"
+# Set architecture-specific values
+switch ($arch) {
+    "aarch64" {
+        $includearch = "arm64"
+        $target = "aarch64-linux-android"
+        $ar_tool = "aarch64-linux-android-ar$exe_ext"
+        $linker_tool = "aarch64-linux-android23-clang++$cmd_ext"
+    }
+    "armv7" {
+        $includearch = "arm"
+        $target = "armv7-linux-androideabi"
+        $ar_tool = "arm-linux-androideabi-ar$exe_ext"
+        $linker_tool = "armv7a-linux-androideabi23-clang++$cmd_ext"
+    }
+    "x86" {
+        $includearch = "x86"
+        $target = "i686-linux-android"
+        $ar_tool = "i686-linux-android-ar$exe_ext"
+        $linker_tool = "i686-linux-android23-clang++$cmd_ext"
+    }
+    "x86_64" {
+        $includearch = "x86_64"
+        $target = "x86_64-linux-android"
+        $ar_tool = "x86_64-linux-android-ar$exe_ext"
+        $linker_tool = "x86_64-linux-android23-clang++$cmd_ext"
+    }
+    default {
+        Write-Error "Unsupported architecture: $arch. Supported: aarch64, armv7, x86, x86_64"
+        exit 1
+    }
+}
+
+# Set up environment variables
+$env:IMAGE_MAGICK_DIR = $imdir
+$env:IMAGE_MAGICK_LIBS = "magickwand-7$sep" + "magickcore-7"
+$env:IMAGE_MAGICK_LIB_DIRS = $libdirs
+$env:IMAGE_MAGICK_INCLUDE_DIRS = "$imdir$sep$imdir/configs/$includearch"
+$env:IMAGE_MAGICK_STATIC = $static
+
+Write-Host "Environment configuration:" -ForegroundColor Yellow
+Write-Host "  TARGET: $target" -ForegroundColor Cyan
+Write-Host "  IMAGE_MAGICK_DIR: $($env:IMAGE_MAGICK_DIR)" -ForegroundColor Cyan
+Write-Host "  IMAGE_MAGICK_LIBS: $($env:IMAGE_MAGICK_LIBS)" -ForegroundColor Cyan
+Write-Host "  IMAGE_MAGICK_LIB_DIRS: $($env:IMAGE_MAGICK_LIB_DIRS)" -ForegroundColor Cyan
+Write-Host "  IMAGE_MAGICK_INCLUDE_DIRS: $($env:IMAGE_MAGICK_INCLUDE_DIRS)" -ForegroundColor Cyan
+Write-Host "  IMAGE_MAGICK_STATIC: $($env:IMAGE_MAGICK_STATIC)" -ForegroundColor Cyan
+
+# Check if target is installed
+$installedTargets = & rustup target list --installed
+if ($installedTargets -notcontains $target) {
+    Write-Host "Installing Rust target: $target" -ForegroundColor Yellow
+    & rustup target add $target
+}
+
+# Build the project
+$cargoCommand = if ($expand) { "expand" } else { "build" }
+$cargoArgs = @("$cargoCommand", "--color=always", "--target=$target", "-p", "kmagick-rs")
+
+if ($release) {
+    $cargoArgs += "--release"
+    $buildMode = "release"
 } else {
-    $includearch = "arm64"
-    $target = "aarch64-linux-android"
+    $buildMode = "debug"
 }
 
-$IMAGE_MAGICK_DIR = $imdir
-$IMAGE_MAGICK_LIBS = "magickwand-7${sep}magickcore-7"
-$IMAGE_MAGICK_LIB_DIRS = $libdirs
-$IMAGE_MAGICK_INCLUDE_DIRS = "$imdir$sep$imdir/configs/$includearch"
-$IMAGE_MAGICK_STATIC = $static
+Write-Host "Running: cargo $($cargoArgs -join ' ')" -ForegroundColor Yellow
+& cargo @cargoArgs
 
-if ($env:IMAGE_MAGICK_DIR -ne $IMAGE_MAGICK_DIR) {
-    $env:IMAGE_MAGICK_DIR = $IMAGE_MAGICK_DIR
-}
-if ($env:IMAGE_MAGICK_LIBS -ne $IMAGE_MAGICK_LIBS) {
-    $env:IMAGE_MAGICK_LIBS = $IMAGE_MAGICK_LIBS
-}
-if ($env:IMAGE_MAGICK_LIB_DIRS -ne $IMAGE_MAGICK_LIB_DIRS) {
-    $env:IMAGE_MAGICK_LIB_DIRS = $IMAGE_MAGICK_LIB_DIRS
-}
-if ($env:IMAGE_MAGICK_INCLUDE_DIRS -ne $IMAGE_MAGICK_INCLUDE_DIRS) {
-    $env:IMAGE_MAGICK_INCLUDE_DIRS = $IMAGE_MAGICK_INCLUDE_DIRS
-}
-if ($env:IMAGE_MAGICK_STATIC -ne $IMAGE_MAGICK_STATIC) {
-    $env:IMAGE_MAGICK_STATIC = $IMAGE_MAGICK_STATIC
-}
-
-if (!$expand) {
-    if($release) {
-        cargo build --color=always --target=$target -p kmagick-rs --release
-    } else {
-        cargo build --color=always --target=$target -p kmagick-rs
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "Build completed successfully!" -ForegroundColor Green
+    if (-not $expand) {
+        Write-Host "Output location: target/$target/$buildMode/libkmagick.so" -ForegroundColor Cyan
     }
 } else {
-    if($release) {
-        cargo expand --color=always --target=$target -p kmagick-rs --release
-    } else {
-        cargo expand --color=always --target=$target -p kmagick-rs
-    }
+    Write-Error "Build failed with exit code $LASTEXITCODE"
+    exit $LASTEXITCODE
 }

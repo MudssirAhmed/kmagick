@@ -32,6 +32,158 @@ Debug messages can be found in Android logcat under the id `MAGICK`. Make sure y
 
 (The Android ImageMagick library can be found [here](https://github.com/MolotovCherry/Android-ImageMagick7))
 
+#### Building Android Library from Source
+
+If you want to build the Android kmagick library from source, follow these detailed instructions:
+
+##### Prerequisites
+
+1. **Rust toolchain**: Install Rust from [rustup.rs](https://rustup.rs/)
+2. **Android NDK**: Download [Android NDK](https://developer.android.com/ndk/downloads) (recommended: r23c or later)
+3. **ImageMagick for Android**: Download the [Android-ImageMagick](https://github.com/MolotovCherry/Android-ImageMagick7) project
+4. **cargo-ndk** (optional but recommended): `cargo install cargo-ndk`
+
+##### Setup Instructions
+
+1. **Install Android targets for Rust**:
+```bash
+# Install all Android targets
+rustup target add aarch64-linux-android    # ARM64 (arm64-v8a)
+rustup target add armv7-linux-androideabi  # ARM (armeabi-v7a)  
+rustup target add i686-linux-android       # x86
+rustup target add x86_64-linux-android     # x86_64
+```
+
+2. **Set up Android NDK environment**:
+```bash
+# Set NDK_HOME environment variable
+export NDK_HOME=/path/to/android-ndk
+export ANDROID_NDK_HOME=$NDK_HOME
+
+# Add NDK tools to PATH
+export PATH=$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
+# On Windows, use: windows-x86_64 instead of linux-x86_64
+# On macOS, use: darwin-x86_64 instead of linux-x86_64
+```
+
+3. **Download Android ImageMagick**:
+   - Clone or download the [Android-ImageMagick7](https://github.com/MolotovCherry/Android-ImageMagick7) repository
+   - Download the [latest Android-ImageMagick shared library release](https://github.com/MolotovCherry/Android-ImageMagick7/releases)
+   - Create a `jniLibs` folder in the Android-ImageMagick repo root
+   - Extract the shared libraries to `jniLibs` with proper architecture folders:
+     ```
+     jniLibs/
+     ├── arm64-v8a/
+     │   ├── libMagick++-7.Q16HDRI.so
+     │   ├── libMagickCore-7.Q16HDRI.so
+     │   └── libMagickWand-7.Q16HDRI.so
+     ├── armeabi-v7a/
+     │   └── ... (similar files)
+     ├── x86/
+     │   └── ... (similar files)
+     └── x86_64/
+         └── ... (similar files)
+     ```
+   - Place the kmagick repository inside the Android-ImageMagick directory
+
+##### Building
+
+**Option 1: Using the build scripts**
+
+For Linux/macOS:
+```bash
+cd rust/
+chmod +x build-android.sh
+
+# Build for specific architecture (debug mode)
+./build-android.sh aarch64  # or armv7, x86, x86_64
+
+# Build for specific architecture (release mode)  
+./build-android.sh aarch64 --release
+
+# Build all architectures (release mode)
+./build-android.sh aarch64 --release
+./build-android.sh armv7 --release
+./build-android.sh x86 --release
+./build-android.sh x86_64 --release
+```
+
+For Windows (PowerShell):
+```powershell
+cd rust/
+# Build for specific architecture (debug mode)
+.\build-android.ps1 -arch aarch64  # or armv7, x86, x86_64
+
+# Build for specific architecture (release mode)
+.\build-android.ps1 -arch aarch64 -release
+
+# Build all architectures (release mode)
+.\build-android.ps1 -arch aarch64 -release
+.\build-android.ps1 -arch armv7 -release  
+.\build-android.ps1 -arch x86 -release
+.\build-android.ps1 -arch x86_64 -release
+```
+
+**Option 2: Using cargo-ndk (easier)**
+
+```bash
+cd rust/
+
+# Install cargo-ndk if not already installed
+cargo install cargo-ndk
+
+# Build for all Android targets
+cargo ndk -t armeabi-v7a -t arm64-v8a -t x86 -t x86_64 -- build --package kmagick-rs --release
+
+# Or build for specific target
+cargo ndk -t arm64-v8a -- build --package kmagick-rs --release
+```
+
+**Option 3: Manual cargo build**
+
+```bash
+cd rust/
+
+# Set up environment variables (adjust paths as needed)
+export IMAGE_MAGICK_DIR=/path/to/ImageMagick
+export IMAGE_MAGICK_LIBS="magickwand-7:magickcore-7"
+export IMAGE_MAGICK_LIB_DIRS=/path/to/jniLibs/arm64-v8a
+export IMAGE_MAGICK_INCLUDE_DIRS=/path/to/ImageMagick:/path/to/ImageMagick/configs/arm64
+export IMAGE_MAGICK_STATIC=0
+
+# Build for specific target
+cargo build --target aarch64-linux-android --package kmagick-rs --release
+```
+
+##### Output Files
+
+After building, you'll find the generated library files at:
+- `target/aarch64-linux-android/release/libkmagick.so` (ARM64)
+- `target/armv7-linux-androideabi/release/libkmagick.so` (ARM)
+- `target/i686-linux-android/release/libkmagick.so` (x86)
+- `target/x86_64-linux-android/release/libkmagick.so` (x86_64)
+
+Copy these files to your Android project's `app/src/main/jniLibs/` directory with the appropriate architecture folders:
+
+```
+app/src/main/jniLibs/
+├── arm64-v8a/
+│   └── libkmagick.so
+├── armeabi-v7a/
+│   └── libkmagick.so
+├── x86/
+│   └── libkmagick.so
+└── x86_64/
+    └── libkmagick.so
+```
+
+##### Troubleshooting
+
+- **NDK not found**: Ensure `NDK_HOME` and `ANDROID_NDK_HOME` environment variables are set correctly
+- **Linker errors**: Make sure the ImageMagick libraries are properly placed in the `jniLibs` directory structure
+- **Missing targets**: Run `rustup target add <target-name>` for any missing Android targets
+- **Build fails**: Check that the `IMAGE_MAGICK_*` environment variables point to the correct paths
+
 ### Windows
 1. Grab the `kmagick.dll` file along with the jar and sources jar.
 2. Install Windows ImageMagick (dll version) and make sure the program files folder is in your `PATH`.
