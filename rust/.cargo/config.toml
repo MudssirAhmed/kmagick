@@ -2,20 +2,19 @@
 ar = "aarch64-linux-android-ar.exe"
 linker = "aarch64-linux-android23-clang++.cmd"
 rustflags = [
-    "-C", "link-arg=-DMAGICKCORE_HDRI_ENABLE=1",
-    "-C", "link-arg=-DMAGICKCORE_QUANTUM_DEPTH=16"
+    "-C", "link-args=-DMAGICKCORE_QUANTUM_DEPTH=16",
+    "-C", "link-args=-DMAGICKCORE_HDRI_ENABLE=1"
 ]
 
 [target.armv7-linux-androideabi]
 ar = "arm-linux-androideabi-ar.exe"
 linker = "armv7a-linux-androideabi23-clang++.cmd"
 rustflags = [
-    "-C", "link-arg=-DMAGICKCORE_HDRI_ENABLE=1",
-    "-C", "link-arg=-DMAGICKCORE_QUANTUM_DEPTH=16"
+    "-C", "link-args=-DMAGICKCORE_QUANTUM_DEPTH=16",
+    "-C", "link-args=-DMAGICKCORE_HDRI_ENABLE=1"
 ]
 
 [env]
+PKG_CONFIG_PATH = "${CARGO_MANIFEST_DIR}/../ImageMagick/lib/pkgconfig"
 MAGICKCORE_HDRI_ENABLE = "1"
 MAGICKCORE_QUANTUM_DEPTH = "16"
-CFLAGS = "-DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16"
-CXXFLAGS = "-DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16"
