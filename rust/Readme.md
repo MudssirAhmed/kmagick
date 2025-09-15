@@ -19,26 +19,103 @@ The build script has several flags you can use.
 \* Please make sure you have Visual Studio Build Tools installed; you may also need to use the Visual Studio Dev console to find `stdio.h`
 
 ### Android
+
+KMagick provides comprehensive Android NDK support with multiple build methods and optimizations.
+
+#### Prerequisites
 - Download the entire [Android-ImageMagick](https://github.com/MolotovCherry/Android-ImageMagick7) repo
 - Place this kmagick repo in the Android-Imagemagick repo folder
 - Download the [latest Android-Imagemagick shared lib release](https://github.com/MolotovCherry/Android-ImageMagick7/releases)
 - Make a `jniLibs` folder in the Android-Imagemagick repo root
 - Place the shared libs in the `jniLibs` folder (structure should look like `Android-Imagemagick/jniLibs/arm64-v8a/*.so`)
 - Download and install the [Android ndk](https://developer.android.com/ndk/downloads) version r22b (newer version has a bug which breaks building; See [here](https://github.com/rust-lang/rust/pull/85806))
-- Create env vars for Android NDK: (note, this is not a script, only pseudocode)
+- Install Android Rust targets:
+```bash
+rustup target add aarch64-linux-android
+rustup target add armv7-linux-androideabi  
+rustup target add i686-linux-android
+rustup target add x86_64-linux-android
 ```
-$ndkRoot = "path/to/android-ndk-r22b"
-ANDROID_NDK_HOME=$ndkRoot
-NDK_HOME=$ndkRoot
-PATH=$PATH:$ndkRoot
-CLANG_PATH=$ndkRoot\toolchains\llvm\prebuilt\windows-x86_64\bin\clang.exe
-PATH=$PATH:\$ndkRoot\toolchains\llvm\prebuilt\windows-x86_64\bin\
-```
-- Open powershell and run `build-android.ps1`
 
-The build script has several flags you can use.  
-`-release` build as release (default will build as debug)  
-`-expand` to use cargo expand to see the generated output
+#### Environment Variables
+Create env vars for Android NDK (adjust paths for your platform):
+
+**Windows:**
+```powershell
+$ndkRoot = "path/to/android-ndk-r22b"
+$env:ANDROID_NDK_HOME = $ndkRoot
+$env:NDK_HOME = $ndkRoot
+$env:PATH = "$env:PATH;$ndkRoot"
+$env:CLANG_PATH = "$ndkRoot\toolchains\llvm\prebuilt\windows-x86_64\bin\clang.exe"
+$env:PATH = "$env:PATH;$ndkRoot\toolchains\llvm\prebuilt\windows-x86_64\bin\"
+```
+
+**Linux/macOS:**
+```bash
+export ANDROID_NDK_HOME=/path/to/android-ndk-r22b
+export NDK_HOME=$ANDROID_NDK_HOME
+export PATH=$PATH:$ANDROID_NDK_HOME
+export CLANG_PATH=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/clang
+```
+
+#### Build Methods
+
+**Method 1: Enhanced PowerShell Script (Recommended)**
+```powershell
+# Build all architectures (release)
+.\build-android-enhanced.ps1 -all -release
+
+# Build specific architecture
+.\build-android-enhanced.ps1 -arch aarch64 -release
+
+# Clean build
+.\build-android-enhanced.ps1 -all -clean -release
+```
+
+**Method 2: Original PowerShell Script**
+```powershell
+# Basic build for aarch64
+.\build-android.ps1
+
+# Build with options
+.\build-android.ps1 -arch arm -release
+```
+
+**Method 3: Using cargo-ndk (requires cargo install cargo-ndk)**
+```bash
+# From android directory
+./build-with-cargo-ndk.sh --release
+
+# Custom architectures
+./build-with-cargo-ndk.sh --archs arm64-v8a,armeabi-v7a --api 28
+```
+
+**Method 4: Direct Bash Script (Linux/macOS)**
+```bash
+# From project root
+./android/build-all-targets.sh release
+```
+
+#### Supported Architectures
+- `aarch64` → `aarch64-linux-android` (arm64-v8a)
+- `arm` → `armv7-linux-androideabi` (armeabi-v7a) 
+- `x86` → `i686-linux-android` (x86)
+- `x86_64` → `x86_64-linux-android` (x86_64)
+
+#### Build Script Flags
+The build scripts support several flags:
+- `-release` build as release (default will build as debug)
+- `-expand` to use cargo expand to see the generated output
+- `-all` build for all architectures (enhanced script only)
+- `-clean` clean build directories first (enhanced script only)
+- `-verbose` verbose output (enhanced script only)
+
+#### Output
+Built libraries will be placed in:
+- Enhanced script: `../android/libs/`
+- Direct cargo: `target/{rust-target}/{debug|release}/`
+
+For detailed Android setup and integration instructions, see the [Android Build Guide](../android/README.md).
 
 ## Rust devs - a note for you all
 The two crates `jni-macros` and `jni-tools` offers some FULLY working macros which generate JNI bindings for Rust functions. Of course, it's only Kotlin compatible (no Java; although you _could_ edit the handle fn's to fix that). You can even use regular impl's which KEEP STATE between calls as if it was a real class instance! The `jni-tools` crate offers the visible public API for it. There's also docs on it to explain its usage, however, if you want to fully know how to use it, you should take a look at my Rust and Kotlin code as the prime example.

@@ -13,6 +13,7 @@ crate-type = ["cdylib"]
 
 [build-dependencies]
 winres = "0.1.12"
+cargo_metadata = "0.15.0"
 
 # windows only metadata
 [package.metadata.winres]

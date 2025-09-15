@@ -1,0 +1,52 @@
+// Android Gradle build configuration for kmagick
+// This can be included in Android projects that need kmagick
+
+android {
+    compileSdk 34
+
+    defaultConfig {
+        minSdk 23
+        targetSdk 34
+        
+        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64'
+        }
+        
+        externalNativeBuild {
+            cmake {
+                cppFlags "-std=c++14", "-frtti", "-fexceptions"
+                arguments "-DANDROID_STL=c++_shared"
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            jniDebuggable true
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path "CMakeLists.txt"
+            version "3.22.1"
+        }
+    }
+
+    packagingOptions {
+        // Ensure native libraries are included
+        jniLibs {
+            keepDebugSymbols += ['**/*.so']
+        }
+    }
+
+    sourceSets {
+        main {
+            jniLibs.srcDirs = ['libs']
+        }
+    }
+}
