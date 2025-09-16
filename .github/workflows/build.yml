@@ -64,7 +64,7 @@ jobs:
         uses: i3h/download-release-asset@v1
         with:
           tag: latest
-          owner: molotovcherry
+          owner: mudssirahmed
           repo: Android-ImageMagick7
           file: imagemagick-7-android-arm64-v8a.zip
           path: jniLibs/
