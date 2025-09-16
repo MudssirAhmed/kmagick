@@ -72,6 +72,38 @@ if ($env:IMAGE_MAGICK_STATIC -ne $IMAGE_MAGICK_STATIC) {
     $env:IMAGE_MAGICK_STATIC = $IMAGE_MAGICK_STATIC
 }
 
+
+# Set the path to your header file
+$configFile = "$imdir/MagickCore/magick-config.h"
+
+# Check if file exists
+if (Test-Path $configFile) {
+    # Read existing content
+    $configContent = Get-Content $configFile -Raw
+
+    # Check if MAGICKCORE_HDRI_ENABLE is already defined
+    if ($configContent -match "#define\s+MAGICKCORE_HDRI_ENABLE") {
+        Write-Host "MAGICKCORE_HDRI_ENABLE is already defined in the file."
+        # If you want to update the existing value, you can use:
+        $configContent = $configContent -replace "#define\s+MAGICKCORE_HDRI_ENABLE\s+\d+", "#define MAGICKCORE_HDRI_ENABLE 1"
+    } else {
+        # Add the definition if it doesn't exist
+        $configContent = @"
+/* HDRI enable configuration */
+#define MAGICKCORE_HDRI_ENABLE 1
+
+$configContent
+"@
+    }
+
+    # Write back to file
+    $configContent | Set-Content $configFile -Force
+    Write-Host "Configuration updated successfully $configFile"
+} else {
+    Write-Host "File not exists at $configFile"
+}
+
+
 if (!$expand) {
     if($release) {
         cargo build --color=always --target=$target -p kmagick-rs --release
