@@ -167,6 +167,8 @@ jobs:
 
       - name: Build
         working-directory: kmagick-rs/rust
+        env:
+          RUSTFLAGS: "-C link-arg=-z -C link-arg=max-page-size=16384"
         run: ./${{ matrix.debug.tool }}
 
       - name: Upload artifacts

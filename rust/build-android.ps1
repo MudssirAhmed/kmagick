@@ -96,18 +96,6 @@ $configContent
 "@
     }
 
-    # Add/update quantum depth configuration
-    if ($configContent -match "#define\s+MAGICKCORE_QUANTUM_DEPTH") {
-        $configContent = $configContent -replace "#define\s+MAGICKCORE_QUANTUM_DEPTH\s+\d+", "#define MAGICKCORE_QUANTUM_DEPTH 16"
-    } else {
-        $configContent = @"
-/* Quantum depth configuration */
-#define MAGICKCORE_QUANTUM_DEPTH 16
-
-$configContent
-"@
-    }
-
     # Write back to file
     $configContent | Set-Content $configFile -Force
     Write-Host "Configuration updated successfully $configFile"
@@ -115,6 +103,8 @@ $configContent
     Write-Host "File not exists at $configFile"
 }
 
+# Add these lines before the cargo build command
+$env:RUSTFLAGS = "-C link-arg=-z -C link-arg=max-page-size=16384"
 
 if (!$expand) {
     if($release) {
